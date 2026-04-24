@@ -84,3 +84,39 @@ def format_diff_rows(entries: list[DiffEntry]) -> list[list]:
     for e in entries:
         rows.append([e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation])
     return rows
+
+
+def format_version_diff_tab(
+    entries: list[DiffEntry],
+    version_id: str,
+    version_name: str,
+    description: str,
+    prev_version_id: str,
+) -> tuple[list[list], int]:
+    """
+    Returns (rows, table_header_row_index) for a version diff sheet tab.
+
+    Layout:
+      Row 0: バージョン    | v{version_id}
+      Row 1: バージョン名  | {version_name}
+      Row 2: 説明         | {description}
+      Row 3: 比較対象     | v{prev} → v{cur}
+      Row 4: (空白)
+      Row 5: [table header]
+      Row 6+: data
+    """
+    meta_rows: list[list] = [
+        ["バージョン", f"v{version_id}"],
+        ["バージョン名", version_name or "（未設定）"],
+        ["説明", description or "（未設定）"],
+        ["比較対象", f"v{prev_version_id} → v{version_id}"],
+        [],
+    ]
+    table_header = ["変更種別", "要素種別", "要素名", "変更前", "変更後", "解説（AI）"]
+    data_rows = [
+        [e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation]
+        for e in entries
+    ] or [["（変更なし）", "", "", "", "", ""]]
+
+    rows = meta_rows + [table_header] + data_rows
+    return rows, len(meta_rows)
