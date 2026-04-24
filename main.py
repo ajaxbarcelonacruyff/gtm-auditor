@@ -131,14 +131,14 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
 
         headers = gtm.list_versions(container_id)
 
+        print(f"  v{vid} を処理します")
+        _write_latest_sheets(writer, explainer, live, label, lang=lang)
+        _write_version_list(writer, headers, label, vid, lang=lang)
+
         last_vid = state.get(f"{container_id}_last_version", "")
         if vid == last_vid:
-            print(f"  最新バージョン v{vid} は前回処理済みです（スキップ）")
-            _write_version_list(writer, headers, label, vid, lang=lang)
+            print(f"  差分タブは前回処理済みのためスキップします")
             continue
-
-        print(f"  新バージョン v{vid} を処理します")
-        _write_latest_sheets(writer, explainer, live, label, lang=lang)
 
         prev_headers = [
             h for h in headers
@@ -167,8 +167,6 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
                 print(f"  警告: 差分タブの生成に失敗しました: {e}")
         else:
             print(f"  v{vid} が最初のバージョンのため差分タブはスキップします")
-
-        _write_version_list(writer, headers, label, vid, lang=lang)
 
         state[f"{container_id}_last_version"] = vid
         save_state(state)
