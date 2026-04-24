@@ -75,8 +75,6 @@ def _write_version_sheets(
         if int(h.get("containerVersionId", "0")) < vid
     ]
 
-    _write_latest_sheets(writer, explainer, after_version, container_label, suffix=f"v{vid}")
-
     if prev_headers:
         prev_id = prev_headers[-1]["containerVersionId"]
         print(f"  差分計算: v{prev_id} → v{vid}")
@@ -176,6 +174,7 @@ def run_all(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Claude
         print(f"  {len(headers)} バージョン見つかりました")
 
         _write_version_list(writer, headers, label, live_vid)
+        _write_latest_sheets(writer, explainer, live, label)
 
         for header in headers:
             vid = header.get("containerVersionId", "")
