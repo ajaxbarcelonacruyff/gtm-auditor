@@ -35,8 +35,26 @@ class Config:
         errors = []
         if not account_id:
             errors.append("GTM_ACCOUNT_ID が設定されていません")
+        elif not account_id.isdigit():
+            errors.append(
+                f"GTM_ACCOUNT_ID は数値である必要があります（設定値: '{account_id}'）\n"
+                "  GTM URL の accounts/XXXXXXXXX の数字部分を設定してください"
+            )
         if not client_id:
             errors.append("GTM_CLIENT_CONTAINER_ID が設定されていません")
+        elif not client_id.isdigit():
+            errors.append(
+                f"GTM_CLIENT_CONTAINER_ID は数値である必要があります（設定値: '{client_id}'）\n"
+                "  'GTM-XXXXXX' ではなく GTM URL の containers/XXXXXXXXX の数字部分を設定してください\n"
+                "  例: https://tagmanager.google.com/#/container/accounts/40182/containers/12345678/\n"
+                "                                                                          ^^^^^^^^\n"
+                "                                                                          この数字"
+            )
+        if server_id and not server_id.isdigit():
+            errors.append(
+                f"GTM_SERVER_CONTAINER_ID は数値である必要があります（設定値: '{server_id}'）\n"
+                "  GTM URL の containers/XXXXXXXXX の数字部分を設定してください"
+            )
         if not sheet_url:
             errors.append("GOOGLE_SHEET_URL が設定されていません")
 

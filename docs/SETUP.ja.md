@@ -95,13 +95,15 @@ MODE=latest
 
 ### GTM の ID の調べ方
 
-GTM をブラウザで開いたときのURL を確認する:
+GTM をブラウザで開いたときの URL を確認する。**「GTM-XXXXXX」形式ではなく、URL 内の数字を使う。**
 
 ```
 https://tagmanager.google.com/#/container/accounts/123456789/containers/987654321/...
                                                    ^^^^^^^^^              ^^^^^^^^^
-                                                   アカウントID           コンテナID
+                                               GTM_ACCOUNT_ID        GTM_CLIENT_CONTAINER_ID
 ```
+
+> **注意:** タグに表示される `GTM-XXXXXX` 形式（例: `GTM-P7NMS64`）はコンテナの公開用IDです。API では使用できません。URL 内の数字のみ設定してください。
 
 ### Google スプレッドシートの共有設定
 

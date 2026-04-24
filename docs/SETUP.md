@@ -95,13 +95,15 @@ MODE=latest
 
 ### Finding your GTM IDs
 
-Open GTM in your browser. The URL looks like:
+Open GTM in your browser. Use the **numeric IDs from the URL** — not the `GTM-XXXXXX` tag ID.
 
 ```
 https://tagmanager.google.com/#/container/accounts/123456789/containers/987654321/...
                                                    ^^^^^^^^^              ^^^^^^^^^
-                                                   Account ID             Container ID
+                                               GTM_ACCOUNT_ID        GTM_CLIENT_CONTAINER_ID
 ```
+
+> **Note:** The `GTM-XXXXXX` format (e.g. `GTM-P7NMS64`) shown on tags is the public container ID and cannot be used with the API. Use only the numeric IDs from the URL.
 
 ### Sharing the Google Sheet
 
