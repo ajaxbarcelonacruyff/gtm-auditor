@@ -75,28 +75,7 @@ def _write_version_sheets(
         if int(h.get("containerVersionId", "0")) < vid
     ]
 
-    folder_map = {}
-    for f in after_version.get("folder", []):
-        folder_map[f.get("folderId", "")] = f.get("name", "")
-    trigger_map = _build_trigger_map(after_version)
-
-    tab_snapshot = f"v{vid}_{container_label}_全体"
-    tags = after_version.get("tag", [])
-    triggers = after_version.get("trigger", [])
-    variables = after_version.get("variable", [])
-    folders = after_version.get("folder", [])
-
-    tag_explanations = explainer.explain_elements("タグ", tags)
-    trigger_explanations = explainer.explain_elements("トリガー", triggers)
-    variable_explanations = explainer.explain_elements("変数", variables)
-
-    snapshot_rows = (
-        format_tags(tags, folder_map, trigger_map, container_label, tag_explanations)
-        + format_triggers(triggers, folder_map, container_label, trigger_explanations)[1:]
-        + format_variables(variables, folder_map, container_label, variable_explanations)[1:]
-        + format_folders(folders, container_label)[1:]
-    )
-    writer.write_tab(tab_snapshot, snapshot_rows)
+    _write_latest_sheets(writer, explainer, after_version, container_label, suffix=f"v{vid}")
 
     if prev_headers:
         prev_id = prev_headers[-1]["containerVersionId"]
