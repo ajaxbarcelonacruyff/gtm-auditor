@@ -91,6 +91,9 @@ ANTHROPIC_API_KEY=
 
 # 実行モード: latest（デフォルト）/ all
 MODE=latest
+
+# 出力言語: en（デフォルト）/ ja
+LANGUAGE=ja
 ```
 
 ### GTM の ID の調べ方

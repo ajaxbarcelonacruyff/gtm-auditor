@@ -91,6 +91,9 @@ ANTHROPIC_API_KEY=
 
 # Run mode: latest (default) / all
 MODE=latest
+
+# Output language: en (default) / ja
+LANGUAGE=en
 ```
 
 ### Finding your GTM IDs
