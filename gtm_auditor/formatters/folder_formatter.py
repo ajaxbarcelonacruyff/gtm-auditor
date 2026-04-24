@@ -2,7 +2,7 @@ def format_folders(
     folders: list[dict],
     container_label: str,
 ) -> list[list]:
-    header = ["フォルダ名", "コンテナ", "フォルダID"]
+    header = ["Folder Name", "Container", "Folder ID"]
     rows = [header]
     for folder in sorted(folders, key=lambda f: f.get("name", "")):
         rows.append([

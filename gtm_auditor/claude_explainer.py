@@ -10,6 +10,17 @@ except ImportError:
 
 _CHUNK_SIZE = 15
 
+_KIND_EN_TO_JA = {
+    "Tag": "タグ",
+    "Trigger": "トリガー",
+    "Variable": "変数",
+    "Folder": "フォルダ",
+}
+
+
+def _has_japanese(text: str) -> bool:
+    return bool(re.search(r'[぀-ゟ゠-ヿ一-鿿]', text))
+
 
 class ClaudeExplainer:
     def __init__(self, api_key: Optional[str]):
@@ -61,18 +72,14 @@ class ClaudeExplainer:
         if not self._enabled:
             return ""
         try:
+            if _has_japanese(diff_summary):
+                instruction = "以下のGTM設定変更の内容を1〜2文で日本語で解説してください。\n\n"
+            else:
+                instruction = "Explain the following GTM configuration change in 1-2 sentences in English.\n\n"
             message = self._client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=256,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": (
-                            "以下のGTM設定変更の内容を1〜2文で日本語で解説してください。\n\n"
-                            + diff_summary
-                        ),
-                    }
-                ],
+                messages=[{"role": "user", "content": instruction + diff_summary}],
             )
             return message.content[0].text.strip()
         except Exception as e:
@@ -81,10 +88,12 @@ class ClaudeExplainer:
 
     def _build_prompt(self, element_kind: str, elements: list[dict]) -> str:
         elements_json = json.dumps(elements, ensure_ascii=False, indent=2)
-        return f"""以下はGoogle Tag Manager（GTM）の{element_kind}一覧です。
+        if _has_japanese(elements_json):
+            kind_label = _KIND_EN_TO_JA.get(element_kind, element_kind)
+            return f"""以下はGoogle Tag Manager（GTM）の{kind_label}一覧です。
 各要素について、以下の2項目を日本語で回答してください。
 
-1. 役割・解説: この{element_kind}が何をするものか（1〜2文）
+1. 役割・解説: この{kind_label}が何をするものか（1〜2文）
 2. 具体例: 実際にどんな場面で動くか（「〜のページを開いたとき」「〜ボタンをクリックしたとき」など）
 
 必ずJSON形式のみで返してください（コードブロック不要）:
@@ -95,12 +104,29 @@ class ClaudeExplainer:
   }}
 }}
 
-{element_kind}データ:
+{kind_label}データ:
+{elements_json}
+"""
+        else:
+            return f"""The following is a list of {element_kind}s in Google Tag Manager (GTM).
+For each element, provide the following 2 items in English.
+
+1. Role / Description: What this {element_kind} does (1-2 sentences)
+2. Example: In what situation it actually fires (e.g. "When a page loads", "When a button is clicked", etc.)
+
+Return only JSON format (no code blocks):
+{{
+  "element_name": {{
+    "explanation": "role / description",
+    "example": "example"
+  }}
+}}
+
+{element_kind} data:
 {elements_json}
 """
 
     def _parse_response(self, raw: str) -> dict[str, dict]:
-        # Strip markdown code blocks if present
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip()
         try:
             start = cleaned.find("{")

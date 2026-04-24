@@ -22,8 +22,8 @@ def format_tags(
 ) -> list[list]:
     """Returns rows for the タグ sheet (header + data)."""
     header = [
-        "タグ名", "コンテナ", "テンプレート種別", "フォルダ",
-        "役割・解説", "具体例", "発火トリガー", "ブロックトリガー", "パラメータ詳細",
+        "Tag Name", "Container", "Template Type", "Folder",
+        "Role / Description", "Example", "Firing Triggers", "Blocking Triggers", "Parameter Details",
     ]
     rows = [header]
     for tag in sorted(tags, key=lambda t: t.get("name", "")):

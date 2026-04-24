@@ -36,7 +36,7 @@ def _write_latest_sheets(
     explainer: ClaudeExplainer,
     version: dict,
     container_label: str,
-    suffix: str = "最新",
+    suffix: str = "Latest",
 ) -> None:
     folder_map = {}
     for f in version.get("folder", []):
@@ -48,14 +48,14 @@ def _write_latest_sheets(
     variables = version.get("variable", [])
     folders = version.get("folder", [])
 
-    tag_explanations = explainer.explain_elements("タグ", tags)
-    trigger_explanations = explainer.explain_elements("トリガー", triggers)
-    variable_explanations = explainer.explain_elements("変数", variables)
+    tag_explanations = explainer.explain_elements("Tag", tags)
+    trigger_explanations = explainer.explain_elements("Trigger", triggers)
+    variable_explanations = explainer.explain_elements("Variable", variables)
 
-    writer.write_tab(f"タグ（{suffix}）", format_tags(tags, folder_map, trigger_map, container_label, tag_explanations))
-    writer.write_tab(f"トリガー（{suffix}）", format_triggers(triggers, folder_map, container_label, trigger_explanations))
-    writer.write_tab(f"変数（{suffix}）", format_variables(variables, folder_map, container_label, variable_explanations))
-    writer.write_tab(f"フォルダ（{suffix}）", format_folders(folders, container_label))
+    writer.write_tab(f"Tags ({suffix})", format_tags(tags, folder_map, trigger_map, container_label, tag_explanations))
+    writer.write_tab(f"Triggers ({suffix})", format_triggers(triggers, folder_map, container_label, trigger_explanations))
+    writer.write_tab(f"Variables ({suffix})", format_variables(variables, folder_map, container_label, variable_explanations))
+    writer.write_tab(f"Folders ({suffix})", format_folders(folders, container_label))
 
 
 def _write_version_sheets(
@@ -85,7 +85,7 @@ def _write_version_sheets(
 
         if explainer.enabled:
             for entry in diff_entries:
-                summary = f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\n前: {entry.before}\n後: {entry.after}"
+                summary = f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\nBefore: {entry.before}\nAfter: {entry.after}"
                 entry.explanation = explainer.explain_diff(summary)
 
         version_name = after_version.get("name", "")
@@ -93,7 +93,7 @@ def _write_version_sheets(
         rows, header_row = format_version_diff_tab(
             diff_entries, str(vid), version_name, version_desc, prev_id
         )
-        writer.write_tab(f"v{vid}_{container_label}_差分", rows, table_header_row=header_row)
+        writer.write_tab(f"v{vid}_{container_label}_Diff", rows, table_header_row=header_row)
     else:
         print(f"  v{vid} より前のバージョンがないため差分タブはスキップします")
 
@@ -106,7 +106,7 @@ def _write_version_list(
 ) -> None:
     print(f"  バージョン一覧を更新中...")
     rows = format_version_list(headers, container_label, live_version_id)
-    writer.write_tab(f"バージョン一覧_{container_label}", rows)
+    writer.write_tab(f"Version List_{container_label}", rows)
 
 
 def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: ClaudeExplainer) -> None:
@@ -147,7 +147,7 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
                     for entry in diff_entries:
                         summary = (
                             f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\n"
-                            f"前: {entry.before}\n後: {entry.after}"
+                            f"Before: {entry.before}\nAfter: {entry.after}"
                         )
                         entry.explanation = explainer.explain_diff(summary)
                 version_name = live.get("name", "")
@@ -155,7 +155,7 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
                 rows, header_row = format_version_diff_tab(
                     diff_entries, vid, version_name, version_desc, prev_id
                 )
-                writer.write_tab(f"v{vid}_{label}_差分", rows, table_header_row=header_row)
+                writer.write_tab(f"v{vid}_{label}_Diff", rows, table_header_row=header_row)
             except Exception as e:
                 print(f"  警告: 差分タブの生成に失敗しました: {e}")
         else:
@@ -215,7 +215,7 @@ def run_version(
                     for entry in diff_entries:
                         summary = (
                             f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\n"
-                            f"前: {entry.before}\n後: {entry.after}"
+                            f"Before: {entry.before}\nAfter: {entry.after}"
                         )
                         entry.explanation = explainer.explain_diff(summary)
                 version_name = version.get("name", "")
@@ -223,7 +223,7 @@ def run_version(
                 rows, header_row = format_version_diff_tab(
                     diff_entries, version_id, version_name, version_desc, prev_id
                 )
-                writer.write_tab(f"v{version_id}_{label}_差分", rows, table_header_row=header_row)
+                writer.write_tab(f"v{version_id}_{label}_Diff", rows, table_header_row=header_row)
             except Exception as e:
                 print(f"  警告: 差分タブの生成に失敗しました: {e}")
         else:

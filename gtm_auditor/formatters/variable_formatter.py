@@ -16,8 +16,8 @@ def format_variables(
     explanations: dict[str, dict] | None = None,
 ) -> list[list]:
     header = [
-        "変数名", "コンテナ", "種別", "フォルダ",
-        "役割・解説", "具体例", "パラメータ詳細",
+        "Variable Name", "Container", "Type", "Folder",
+        "Role / Description", "Example", "Parameter Details",
     ]
     rows = [header]
     for variable in sorted(variables, key=lambda v: v.get("name", "")):

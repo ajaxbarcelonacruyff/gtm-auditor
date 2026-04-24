@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-ChangeKind = Literal["追加", "削除", "変更"]
-ElementKind = Literal["タグ", "トリガー", "変数", "フォルダ"]
+ChangeKind = Literal["Added", "Deleted", "Modified"]
+ElementKind = Literal["Tag", "Trigger", "Variable", "Folder"]
 
 
 @dataclass
@@ -39,14 +39,14 @@ def _diff_items(
 
     for name in sorted(set(before_map) | set(after_map)):
         if name not in before_map:
-            entries.append(DiffEntry("追加", element_kind, name, "", _normalize(after_map[name])))
+            entries.append(DiffEntry("Added", element_kind, name, "", _normalize(after_map[name])))
         elif name not in after_map:
-            entries.append(DiffEntry("削除", element_kind, name, _normalize(before_map[name]), ""))
+            entries.append(DiffEntry("Deleted", element_kind, name, _normalize(before_map[name]), ""))
         else:
             b = _normalize(before_map[name])
             a = _normalize(after_map[name])
             if b != a:
-                entries.append(DiffEntry("変更", element_kind, name, b, a))
+                entries.append(DiffEntry("Modified", element_kind, name, b, a))
 
     return entries
 
@@ -57,29 +57,29 @@ def compute_diff(before_version: dict, after_version: dict) -> list[DiffEntry]:
     entries += _diff_items(
         before_version.get("tag", []),
         after_version.get("tag", []),
-        "タグ",
+        "Tag",
     )
     entries += _diff_items(
         before_version.get("trigger", []),
         after_version.get("trigger", []),
-        "トリガー",
+        "Trigger",
     )
     entries += _diff_items(
         before_version.get("variable", []),
         after_version.get("variable", []),
-        "変数",
+        "Variable",
     )
     entries += _diff_items(
         before_version.get("folder", []),
         after_version.get("folder", []),
-        "フォルダ",
+        "Folder",
         key="name",
     )
     return entries
 
 
 def format_diff_rows(entries: list[DiffEntry]) -> list[list]:
-    header = ["変更種別", "要素種別", "要素名", "変更前", "変更後", "解説（AI）"]
+    header = ["Change Type", "Element Type", "Element Name", "Before", "After", "AI Notes"]
     rows = [header]
     for e in entries:
         rows.append([e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation])
@@ -97,26 +97,26 @@ def format_version_diff_tab(
     Returns (rows, table_header_row_index) for a version diff sheet tab.
 
     Layout:
-      Row 0: バージョン    | v{version_id}
-      Row 1: バージョン名  | {version_name}
-      Row 2: 説明         | {description}
-      Row 3: 比較対象     | v{prev} → v{cur}
-      Row 4: (空白)
+      Row 0: Version       | v{version_id}
+      Row 1: Version Name  | {version_name}
+      Row 2: Description   | {description}
+      Row 3: Comparison    | v{prev} → v{cur}
+      Row 4: (blank)
       Row 5: [table header]
       Row 6+: data
     """
     meta_rows: list[list] = [
-        ["バージョン", f"v{version_id}"],
-        ["バージョン名", version_name or "（未設定）"],
-        ["説明", description or "（未設定）"],
-        ["比較対象", f"v{prev_version_id} → v{version_id}"],
+        ["Version", f"v{version_id}"],
+        ["Version Name", version_name or "(not set)"],
+        ["Description", description or "(not set)"],
+        ["Comparison", f"v{prev_version_id} → v{version_id}"],
         [],
     ]
-    table_header = ["変更種別", "要素種別", "要素名", "変更前", "変更後", "解説（AI）"]
+    table_header = ["Change Type", "Element Type", "Element Name", "Before", "After", "AI Notes"]
     data_rows = [
         [e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation]
         for e in entries
-    ] or [["（変更なし）", "", "", "", "", ""]]
+    ] or [["(no changes)", "", "", "", "", ""]]
 
     rows = meta_rows + [table_header] + data_rows
     return rows, len(meta_rows)

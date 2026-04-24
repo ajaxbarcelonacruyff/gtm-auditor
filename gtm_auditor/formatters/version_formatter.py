@@ -4,8 +4,8 @@ def format_version_list(
     live_version_id: str = "",
 ) -> list[list]:
     header_row = [
-        "バージョン", "状態", "バージョン名", "説明",
-        "タグ数", "トリガー数", "変数数", "フォルダ数",
+        "Version", "Status", "Version Name", "Description",
+        "# Tags", "# Triggers", "# Variables", "# Folders",
     ]
     rows = [header_row]
     for h in reversed(headers):

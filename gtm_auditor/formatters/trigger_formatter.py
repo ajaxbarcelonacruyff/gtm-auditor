@@ -19,8 +19,8 @@ def format_triggers(
     explanations: dict[str, dict] | None = None,
 ) -> list[list]:
     header = [
-        "トリガー名", "コンテナ", "種別", "フォルダ",
-        "発動条件", "役割・解説", "具体例",
+        "Trigger Name", "Container", "Type", "Folder",
+        "Conditions", "Role / Description", "Example",
     ]
     rows = [header]
     for trigger in sorted(triggers, key=lambda t: t.get("name", "")):
