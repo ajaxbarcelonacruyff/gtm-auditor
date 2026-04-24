@@ -91,6 +91,14 @@ class GTMClient:
             .execute()
         )
 
+    def get_latest_version(self, container_id: str) -> dict:
+        """Returns the most recently created version (highest version ID)."""
+        headers = self.list_versions(container_id)
+        if not headers:
+            return {}
+        latest_id = headers[-1]["containerVersionId"]
+        return self.get_version(container_id, latest_id)
+
     def list_tags(self, version: dict) -> list[dict]:
         return version.get("tag", [])
 

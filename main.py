@@ -123,17 +123,21 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
 
     for container_id, label in cfg.containers:
         print(f"\n[{label}] 最新バージョンを取得中...")
-        live = gtm.get_live_version(container_id)
-        vid = live.get("containerVersionId", "")
+        headers = gtm.list_versions(container_id)
+        if not headers:
+            print(f"  バージョンが見つかりませんでした")
+            continue
+
+        live_vid = gtm.get_live_version(container_id).get("containerVersionId", "")
+        latest = gtm.get_latest_version(container_id)
+        vid = latest.get("containerVersionId", "")
         if not vid:
             print(f"  バージョン情報が取得できませんでした")
             continue
 
-        headers = gtm.list_versions(container_id)
-
-        print(f"  v{vid} を処理します")
-        _write_latest_sheets(writer, explainer, live, label, lang=lang)
-        _write_version_list(writer, headers, label, vid, lang=lang)
+        print(f"  最新バージョン: v{vid}（Live: v{live_vid}）")
+        _write_latest_sheets(writer, explainer, latest, label, lang=lang)
+        _write_version_list(writer, headers, label, live_vid, lang=lang)
 
         last_vid = state.get(f"{container_id}_last_version", "")
         if vid == last_vid:
@@ -149,7 +153,7 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
             print(f"  差分計算: v{prev_id} → v{vid}...")
             try:
                 before = gtm.get_version(container_id, prev_id)
-                diff_entries = compute_diff(before, live)
+                diff_entries = compute_diff(before, latest)
                 if explainer.enabled:
                     for entry in diff_entries:
                         summary = (
@@ -157,8 +161,8 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
                             f"Before: {entry.before}\nAfter: {entry.after}"
                         )
                         entry.explanation = explainer.explain_diff(summary)
-                version_name = live.get("name", "")
-                version_desc = live.get("description", "")
+                version_name = latest.get("name", "")
+                version_desc = latest.get("description", "")
                 rows, header_row = format_version_diff_tab(
                     diff_entries, vid, version_name, version_desc, prev_id, lang=lang
                 )
@@ -176,13 +180,13 @@ def run_all(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Claude
     lang = cfg.language
     for container_id, label in cfg.containers:
         print(f"\n[{label}] 全バージョンを取得中...")
-        live = gtm.get_live_version(container_id)
-        live_vid = live.get("containerVersionId", "")
         headers = gtm.list_versions(container_id)
         print(f"  {len(headers)} バージョン見つかりました")
+        live_vid = gtm.get_live_version(container_id).get("containerVersionId", "")
+        latest = gtm.get_latest_version(container_id)
 
         _write_version_list(writer, headers, label, live_vid, lang=lang)
-        _write_latest_sheets(writer, explainer, live, label, lang=lang)
+        _write_latest_sheets(writer, explainer, latest, label, lang=lang)
 
         for header in headers:
             vid = header.get("containerVersionId", "")
