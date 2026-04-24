@@ -1,13 +1,13 @@
+from gtm_auditor.i18n import LABELS
+
+
 def format_version_list(
     headers: list[dict],
     container_label: str,
     live_version_id: str = "",
+    lang: str = "en",
 ) -> list[list]:
-    header_row = [
-        "Version", "Status", "Version Name", "Description",
-        "# Tags", "# Triggers", "# Variables", "# Folders",
-    ]
-    rows = [header_row]
+    rows = [LABELS[lang]["version_list_headers"]]
     for h in reversed(headers):
         vid = h.get("containerVersionId", "")
         status = "▶ Live" if vid == live_version_id else ""

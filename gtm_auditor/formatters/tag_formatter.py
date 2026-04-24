@@ -1,3 +1,6 @@
+from gtm_auditor.i18n import LABELS
+
+
 def _param_summary(params: list[dict]) -> str:
     if not params:
         return ""
@@ -19,13 +22,9 @@ def format_tags(
     trigger_map: dict[str, str],
     container_label: str,
     explanations: dict[str, dict] | None = None,
+    lang: str = "en",
 ) -> list[list]:
-    """Returns rows for the タグ sheet (header + data)."""
-    header = [
-        "Tag Name", "Container", "Template Type", "Folder",
-        "Role / Description", "Example", "Firing Triggers", "Blocking Triggers", "Parameter Details",
-    ]
-    rows = [header]
+    rows = [LABELS[lang]["tag_headers"]]
     for tag in sorted(tags, key=lambda t: t.get("name", "")):
         name = tag.get("name", "")
         tag_type = tag.get("type", "")

@@ -9,6 +9,7 @@ from gtm_auditor.diff_engine import compute_diff, format_diff_rows, format_versi
 from gtm_auditor.claude_explainer import ClaudeExplainer
 from gtm_auditor.sheets_writer import SheetsWriter
 from gtm_auditor.formatters import format_tags, format_triggers, format_variables, format_folders, format_version_list
+from gtm_auditor.i18n import LABELS
 
 STATE_PATH = Path("state.json")
 
@@ -36,8 +37,13 @@ def _write_latest_sheets(
     explainer: ClaudeExplainer,
     version: dict,
     container_label: str,
-    suffix: str = "Latest",
+    lang: str = "en",
+    suffix: str | None = None,
 ) -> None:
+    lbl = LABELS[lang]
+    if suffix is None:
+        suffix = lbl["latest"]
+
     folder_map = {}
     for f in version.get("folder", []):
         folder_map[f.get("folderId", "")] = f.get("name", "")
@@ -52,10 +58,10 @@ def _write_latest_sheets(
     trigger_explanations = explainer.explain_elements("Trigger", triggers)
     variable_explanations = explainer.explain_elements("Variable", variables)
 
-    writer.write_tab(f"Tags ({suffix})", format_tags(tags, folder_map, trigger_map, container_label, tag_explanations))
-    writer.write_tab(f"Triggers ({suffix})", format_triggers(triggers, folder_map, container_label, trigger_explanations))
-    writer.write_tab(f"Variables ({suffix})", format_variables(variables, folder_map, container_label, variable_explanations))
-    writer.write_tab(f"Folders ({suffix})", format_folders(folders, container_label))
+    writer.write_tab(lbl["tab_tags"].format(suffix=suffix), format_tags(tags, folder_map, trigger_map, container_label, tag_explanations, lang=lang))
+    writer.write_tab(lbl["tab_triggers"].format(suffix=suffix), format_triggers(triggers, folder_map, container_label, trigger_explanations, lang=lang))
+    writer.write_tab(lbl["tab_variables"].format(suffix=suffix), format_variables(variables, folder_map, container_label, variable_explanations, lang=lang))
+    writer.write_tab(lbl["tab_folders"].format(suffix=suffix), format_folders(folders, container_label, lang=lang))
 
 
 def _write_version_sheets(
@@ -66,7 +72,9 @@ def _write_version_sheets(
     container_label: str,
     version_id: str,
     all_version_headers: list[dict],
+    lang: str = "en",
 ) -> None:
+    lbl = LABELS[lang]
     vid = int(version_id)
     after_version = gtm.get_version(container_id, str(vid))
 
@@ -89,9 +97,9 @@ def _write_version_sheets(
         version_name = after_version.get("name", "")
         version_desc = after_version.get("description", "")
         rows, header_row = format_version_diff_tab(
-            diff_entries, str(vid), version_name, version_desc, prev_id
+            diff_entries, str(vid), version_name, version_desc, prev_id, lang=lang
         )
-        writer.write_tab(f"v{vid}_{container_label}_Diff", rows, table_header_row=header_row)
+        writer.write_tab(f"v{vid}_{container_label}_{lbl['diff_suffix']}", rows, table_header_row=header_row)
     else:
         print(f"  v{vid} より前のバージョンがないため差分タブはスキップします")
 
@@ -101,14 +109,17 @@ def _write_version_list(
     headers: list[dict],
     container_label: str,
     live_version_id: str,
+    lang: str = "en",
 ) -> None:
+    lbl = LABELS[lang]
     print(f"  バージョン一覧を更新中...")
-    rows = format_version_list(headers, container_label, live_version_id)
-    writer.write_tab(f"Version List_{container_label}", rows)
+    rows = format_version_list(headers, container_label, live_version_id, lang=lang)
+    writer.write_tab(f"{lbl['version_list_prefix']}{container_label}", rows)
 
 
 def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: ClaudeExplainer) -> None:
     state = load_state()
+    lang = cfg.language
 
     for container_id, label in cfg.containers:
         print(f"\n[{label}] 最新バージョンを取得中...")
@@ -118,19 +129,17 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
             print(f"  バージョン情報が取得できませんでした")
             continue
 
-        # バージョン一覧を取得（差分計算・バージョン一覧タブの両方に使う）
         headers = gtm.list_versions(container_id)
 
         last_vid = state.get(f"{container_id}_last_version", "")
         if vid == last_vid:
             print(f"  最新バージョン v{vid} は前回処理済みです（スキップ）")
-            _write_version_list(writer, headers, label, vid)
+            _write_version_list(writer, headers, label, vid, lang=lang)
             continue
 
         print(f"  新バージョン v{vid} を処理します")
-        _write_latest_sheets(writer, explainer, live, label)
+        _write_latest_sheets(writer, explainer, live, label, lang=lang)
 
-        # 前バージョンをバージョン一覧から取得して差分タブを生成
         prev_headers = [
             h for h in headers
             if int(h.get("containerVersionId", "0")) < int(vid)
@@ -151,21 +160,22 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
                 version_name = live.get("name", "")
                 version_desc = live.get("description", "")
                 rows, header_row = format_version_diff_tab(
-                    diff_entries, vid, version_name, version_desc, prev_id
+                    diff_entries, vid, version_name, version_desc, prev_id, lang=lang
                 )
-                writer.write_tab(f"v{vid}_{label}_Diff", rows, table_header_row=header_row)
+                writer.write_tab(f"v{vid}_{label}_{LABELS[lang]['diff_suffix']}", rows, table_header_row=header_row)
             except Exception as e:
                 print(f"  警告: 差分タブの生成に失敗しました: {e}")
         else:
             print(f"  v{vid} が最初のバージョンのため差分タブはスキップします")
 
-        _write_version_list(writer, headers, label, vid)
+        _write_version_list(writer, headers, label, vid, lang=lang)
 
         state[f"{container_id}_last_version"] = vid
         save_state(state)
 
 
 def run_all(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: ClaudeExplainer) -> None:
+    lang = cfg.language
     for container_id, label in cfg.containers:
         print(f"\n[{label}] 全バージョンを取得中...")
         live = gtm.get_live_version(container_id)
@@ -173,15 +183,15 @@ def run_all(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Claude
         headers = gtm.list_versions(container_id)
         print(f"  {len(headers)} バージョン見つかりました")
 
-        _write_version_list(writer, headers, label, live_vid)
-        _write_latest_sheets(writer, explainer, live, label)
+        _write_version_list(writer, headers, label, live_vid, lang=lang)
+        _write_latest_sheets(writer, explainer, live, label, lang=lang)
 
         for header in headers:
             vid = header.get("containerVersionId", "")
             if not vid:
                 continue
             print(f"  バージョン v{vid} を処理中...")
-            _write_version_sheets(writer, explainer, gtm, container_id, label, vid, headers)
+            _write_version_sheets(writer, explainer, gtm, container_id, label, vid, headers, lang=lang)
 
 
 def run_version(
@@ -191,6 +201,7 @@ def run_version(
     writer: SheetsWriter,
     explainer: ClaudeExplainer,
 ) -> None:
+    lang = cfg.language
     for container_id, label in cfg.containers:
         print(f"\n[{label}] バージョン v{version_id} を処理中...")
         live = gtm.get_live_version(container_id)
@@ -198,7 +209,7 @@ def run_version(
         headers = gtm.list_versions(container_id)
 
         version = gtm.get_version(container_id, version_id)
-        _write_latest_sheets(writer, explainer, version, label, suffix=f"v{version_id}")
+        _write_latest_sheets(writer, explainer, version, label, lang=lang, suffix=f"v{version_id}")
 
         prev_headers = [
             h for h in headers
@@ -220,15 +231,15 @@ def run_version(
                 version_name = version.get("name", "")
                 version_desc = version.get("description", "")
                 rows, header_row = format_version_diff_tab(
-                    diff_entries, version_id, version_name, version_desc, prev_id
+                    diff_entries, version_id, version_name, version_desc, prev_id, lang=lang
                 )
-                writer.write_tab(f"v{version_id}_{label}_Diff", rows, table_header_row=header_row)
+                writer.write_tab(f"v{version_id}_{label}_{LABELS[lang]['diff_suffix']}", rows, table_header_row=header_row)
             except Exception as e:
                 print(f"  警告: 差分タブの生成に失敗しました: {e}")
         else:
             print(f"  v{version_id} が最初のバージョンのため差分タブはスキップします")
 
-        _write_version_list(writer, headers, label, live_vid)
+        _write_version_list(writer, headers, label, live_vid, lang=lang)
 
 
 def main() -> None:
@@ -249,11 +260,12 @@ def main() -> None:
     print(f"  アカウントID: {cfg.gtm_account_id}")
     print(f"  コンテナ: {[f'{cid}({lbl})' for cid, lbl in cfg.containers]}")
     print(f"  シートID: {cfg.sheet_id}")
+    print(f"  言語: {cfg.language}")
     print(f"  Claude API: {'有効' if cfg.has_claude else '無効（解説生成スキップ）'}")
 
     gtm = GTMClient(cfg.gtm_account_id)
     writer = SheetsWriter(cfg.sheet_id)
-    explainer = ClaudeExplainer(cfg.anthropic_api_key)
+    explainer = ClaudeExplainer(cfg.anthropic_api_key, language=cfg.language)
 
     if args.version:
         run_version(args.version, cfg, gtm, writer, explainer)

@@ -3,6 +3,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 from dotenv import load_dotenv
+from gtm_auditor.i18n import VALID_LANGUAGES
 
 load_dotenv()
 
@@ -22,6 +23,7 @@ class Config:
     server_container_id: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     mode: str = "latest"
+    language: str = "en"
 
     @classmethod
     def load(cls) -> "Config":
@@ -31,6 +33,7 @@ class Config:
         server_id = os.getenv("GTM_SERVER_CONTAINER_ID", "").strip() or None
         api_key = os.getenv("ANTHROPIC_API_KEY", "").strip() or None
         mode = os.getenv("MODE", "latest").strip()
+        language = os.getenv("LANGUAGE", "en").strip().lower()
 
         errors = []
         if not account_id:
@@ -58,6 +61,9 @@ class Config:
         if not sheet_url:
             errors.append("GOOGLE_SHEET_URL が設定されていません")
 
+        if language not in VALID_LANGUAGES:
+            errors.append(f"LANGUAGE は {sorted(VALID_LANGUAGES)} のいずれかを設定してください（設定値: '{language}'）")
+
         if errors:
             raise ValueError("\n".join(errors))
 
@@ -68,6 +74,7 @@ class Config:
             server_container_id=server_id,
             anthropic_api_key=api_key,
             mode=mode,
+            language=language,
         )
 
     @property

@@ -1,3 +1,6 @@
+from gtm_auditor.i18n import LABELS
+
+
 def _condition_summary(conditions: list[dict]) -> str:
     if not conditions:
         return ""
@@ -17,12 +20,9 @@ def format_triggers(
     folder_map: dict[str, str],
     container_label: str,
     explanations: dict[str, dict] | None = None,
+    lang: str = "en",
 ) -> list[list]:
-    header = [
-        "Trigger Name", "Container", "Type", "Folder",
-        "Conditions", "Role / Description", "Example",
-    ]
-    rows = [header]
+    rows = [LABELS[lang]["trigger_headers"]]
     for trigger in sorted(triggers, key=lambda t: t.get("name", "")):
         name = trigger.get("name", "")
         trigger_type = trigger.get("type", "")

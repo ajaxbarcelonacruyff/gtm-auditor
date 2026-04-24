@@ -1,3 +1,6 @@
+from gtm_auditor.i18n import LABELS
+
+
 def _param_summary(params: list[dict]) -> str:
     if not params:
         return ""
@@ -14,12 +17,9 @@ def format_variables(
     folder_map: dict[str, str],
     container_label: str,
     explanations: dict[str, dict] | None = None,
+    lang: str = "en",
 ) -> list[list]:
-    header = [
-        "Variable Name", "Container", "Type", "Folder",
-        "Role / Description", "Example", "Parameter Details",
-    ]
-    rows = [header]
+    rows = [LABELS[lang]["variable_headers"]]
     for variable in sorted(variables, key=lambda v: v.get("name", "")):
         name = variable.get("name", "")
         var_type = variable.get("type", "")

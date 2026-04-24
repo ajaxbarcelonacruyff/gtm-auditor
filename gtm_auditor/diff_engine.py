@@ -2,9 +2,14 @@ import json
 from dataclasses import dataclass
 from typing import Literal
 
+from gtm_auditor.i18n import LABELS
+
 
 ChangeKind = Literal["Added", "Deleted", "Modified"]
 ElementKind = Literal["Tag", "Trigger", "Variable", "Folder"]
+
+_CHANGE_KEY = {"Added": "change_added", "Deleted": "change_deleted", "Modified": "change_modified"}
+_KIND_KEY = {"Tag": "kind_tag", "Trigger": "kind_trigger", "Variable": "kind_variable", "Folder": "kind_folder"}
 
 
 @dataclass
@@ -18,7 +23,6 @@ class DiffEntry:
 
 
 def _normalize(item: dict) -> str:
-    """Return a stable JSON snapshot of an item for comparison."""
     return json.dumps(item, sort_keys=True, ensure_ascii=False)
 
 
@@ -34,9 +38,7 @@ def _diff_items(
 ) -> list[DiffEntry]:
     before_map = _keyed(before_items, key)
     after_map = _keyed(after_items, key)
-
     entries: list[DiffEntry] = []
-
     for name in sorted(set(before_map) | set(after_map)):
         if name not in before_map:
             entries.append(DiffEntry("Added", element_kind, name, "", _normalize(after_map[name])))
@@ -47,42 +49,27 @@ def _diff_items(
             a = _normalize(after_map[name])
             if b != a:
                 entries.append(DiffEntry("Modified", element_kind, name, b, a))
-
     return entries
 
 
 def compute_diff(before_version: dict, after_version: dict) -> list[DiffEntry]:
-    """Compute differences between two GTM versions."""
     entries: list[DiffEntry] = []
-    entries += _diff_items(
-        before_version.get("tag", []),
-        after_version.get("tag", []),
-        "Tag",
-    )
-    entries += _diff_items(
-        before_version.get("trigger", []),
-        after_version.get("trigger", []),
-        "Trigger",
-    )
-    entries += _diff_items(
-        before_version.get("variable", []),
-        after_version.get("variable", []),
-        "Variable",
-    )
-    entries += _diff_items(
-        before_version.get("folder", []),
-        after_version.get("folder", []),
-        "Folder",
-        key="name",
-    )
+    entries += _diff_items(before_version.get("tag", []), after_version.get("tag", []), "Tag")
+    entries += _diff_items(before_version.get("trigger", []), after_version.get("trigger", []), "Trigger")
+    entries += _diff_items(before_version.get("variable", []), after_version.get("variable", []), "Variable")
+    entries += _diff_items(before_version.get("folder", []), after_version.get("folder", []), "Folder", key="name")
     return entries
 
 
-def format_diff_rows(entries: list[DiffEntry]) -> list[list]:
-    header = ["Change Type", "Element Type", "Element Name", "Before", "After", "AI Notes"]
-    rows = [header]
+def format_diff_rows(entries: list[DiffEntry], lang: str = "en") -> list[list]:
+    lbl = LABELS[lang]
+    rows = [lbl["diff_headers"]]
     for e in entries:
-        rows.append([e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation])
+        rows.append([
+            lbl[_CHANGE_KEY[e.change_kind]],
+            lbl[_KIND_KEY[e.element_kind]],
+            e.name, e.before, e.after, e.explanation,
+        ])
     return rows
 
 
@@ -92,31 +79,20 @@ def format_version_diff_tab(
     version_name: str,
     description: str,
     prev_version_id: str,
+    lang: str = "en",
 ) -> tuple[list[list], int]:
-    """
-    Returns (rows, table_header_row_index) for a version diff sheet tab.
-
-    Layout:
-      Row 0: Version       | v{version_id}
-      Row 1: Version Name  | {version_name}
-      Row 2: Description   | {description}
-      Row 3: Comparison    | v{prev} → v{cur}
-      Row 4: (blank)
-      Row 5: [table header]
-      Row 6+: data
-    """
+    lbl = LABELS[lang]
     meta_rows: list[list] = [
-        ["Version", f"v{version_id}"],
-        ["Version Name", version_name or "(not set)"],
-        ["Description", description or "(not set)"],
-        ["Comparison", f"v{prev_version_id} → v{version_id}"],
+        [lbl["diff_meta_version"], f"v{version_id}"],
+        [lbl["diff_meta_version_name"], version_name or lbl["diff_not_set"]],
+        [lbl["diff_meta_description"], description or lbl["diff_not_set"]],
+        [lbl["diff_meta_comparison"], f"v{prev_version_id} → v{version_id}"],
         [],
     ]
-    table_header = ["Change Type", "Element Type", "Element Name", "Before", "After", "AI Notes"]
     data_rows = [
-        [e.change_kind, e.element_kind, e.name, e.before, e.after, e.explanation]
+        [lbl[_CHANGE_KEY[e.change_kind]], lbl[_KIND_KEY[e.element_kind]], e.name, e.before, e.after, e.explanation]
         for e in entries
-    ] or [["(no changes)", "", "", "", "", ""]]
+    ] or [[lbl["diff_no_changes"], "", "", "", "", ""]]
 
-    rows = meta_rows + [table_header] + data_rows
+    rows = meta_rows + [lbl["diff_headers"]] + data_rows
     return rows, len(meta_rows)
