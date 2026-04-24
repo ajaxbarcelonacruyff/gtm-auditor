@@ -8,7 +8,7 @@ from gtm_auditor.gtm_client import GTMClient
 from gtm_auditor.diff_engine import compute_diff, format_diff_rows
 from gtm_auditor.claude_explainer import ClaudeExplainer
 from gtm_auditor.sheets_writer import SheetsWriter
-from gtm_auditor.formatters import format_tags, format_triggers, format_variables, format_folders
+from gtm_auditor.formatters import format_tags, format_triggers, format_variables, format_folders, format_version_list
 
 STATE_PATH = Path("state.json")
 
@@ -114,6 +114,19 @@ def _write_version_sheets(
         print(f"  v{vid} より前のバージョンがないため差分タブはスキップします")
 
 
+def _write_version_list(
+    writer: SheetsWriter,
+    gtm: GTMClient,
+    container_id: str,
+    container_label: str,
+    live_version_id: str,
+) -> None:
+    print(f"  バージョン一覧を更新中...")
+    headers = gtm.list_versions(container_id)
+    rows = format_version_list(headers, container_label, live_version_id)
+    writer.write_tab(f"バージョン一覧_{container_label}", rows)
+
+
 def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: ClaudeExplainer) -> None:
     state = load_state()
 
@@ -128,10 +141,33 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
         last_vid = state.get(f"{container_id}_last_version", "")
         if vid == last_vid:
             print(f"  最新バージョン v{vid} は前回処理済みです（スキップ）")
+            _write_version_list(writer, gtm, container_id, label, vid)
             continue
 
         print(f"  新バージョン v{vid} を処理します")
         _write_latest_sheets(writer, explainer, live, label)
+
+        # 前バージョンとの差分タブ
+        if last_vid:
+            print(f"  差分計算: v{last_vid} → v{vid}...")
+            try:
+                before = gtm.get_version(container_id, last_vid)
+                diff_entries = compute_diff(before, live)
+                if explainer.enabled:
+                    for entry in diff_entries:
+                        summary = (
+                            f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\n"
+                            f"前: {entry.before}\n後: {entry.after}"
+                        )
+                        entry.explanation = explainer.explain_diff(summary)
+                writer.write_tab(f"v{vid}_{label}_差分", format_diff_rows(diff_entries))
+            except Exception as e:
+                print(f"  警告: 差分タブの生成に失敗しました: {e}")
+        else:
+            print(f"  前バージョンの記録がないため差分タブはスキップします（次回以降は生成されます）")
+
+        _write_version_list(writer, gtm, container_id, label, vid)
+
         state[f"{container_id}_last_version"] = vid
         save_state(state)
 
@@ -139,8 +175,12 @@ def run_latest(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: Cla
 def run_all(cfg: Config, gtm: GTMClient, writer: SheetsWriter, explainer: ClaudeExplainer) -> None:
     for container_id, label in cfg.containers:
         print(f"\n[{label}] 全バージョンを取得中...")
+        live = gtm.get_live_version(container_id)
+        live_vid = live.get("containerVersionId", "")
         headers = gtm.list_versions(container_id)
         print(f"  {len(headers)} バージョン見つかりました")
+
+        _write_version_list(writer, gtm, container_id, label, live_vid)
 
         for header in headers:
             vid = header.get("containerVersionId", "")
@@ -159,7 +199,10 @@ def run_version(
 ) -> None:
     for container_id, label in cfg.containers:
         print(f"\n[{label}] バージョン v{version_id} を処理中...")
+        live = gtm.get_live_version(container_id)
+        live_vid = live.get("containerVersionId", "")
         headers = gtm.list_versions(container_id)
+        _write_version_list(writer, gtm, container_id, label, live_vid)
         _write_version_sheets(writer, explainer, gtm, container_id, label, version_id, headers)
 
 
