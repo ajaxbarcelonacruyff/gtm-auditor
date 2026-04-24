@@ -36,6 +36,7 @@ def _write_latest_sheets(
     explainer: ClaudeExplainer,
     version: dict,
     container_label: str,
+    suffix: str = "最新",
 ) -> None:
     folder_map = {}
     for f in version.get("folder", []):
@@ -51,10 +52,10 @@ def _write_latest_sheets(
     trigger_explanations = explainer.explain_elements("トリガー", triggers)
     variable_explanations = explainer.explain_elements("変数", variables)
 
-    writer.write_tab("タグ（最新）", format_tags(tags, folder_map, trigger_map, container_label, tag_explanations))
-    writer.write_tab("トリガー（最新）", format_triggers(triggers, folder_map, container_label, trigger_explanations))
-    writer.write_tab("変数（最新）", format_variables(variables, folder_map, container_label, variable_explanations))
-    writer.write_tab("フォルダ（最新）", format_folders(folders, container_label))
+    writer.write_tab(f"タグ（{suffix}）", format_tags(tags, folder_map, trigger_map, container_label, tag_explanations))
+    writer.write_tab(f"トリガー（{suffix}）", format_triggers(triggers, folder_map, container_label, trigger_explanations))
+    writer.write_tab(f"変数（{suffix}）", format_variables(variables, folder_map, container_label, variable_explanations))
+    writer.write_tab(f"フォルダ（{suffix}）", format_folders(folders, container_label))
 
 
 def _write_version_sheets(
@@ -217,8 +218,39 @@ def run_version(
         live = gtm.get_live_version(container_id)
         live_vid = live.get("containerVersionId", "")
         headers = gtm.list_versions(container_id)
+
+        version = gtm.get_version(container_id, version_id)
+        _write_latest_sheets(writer, explainer, version, label, suffix=f"v{version_id}")
+
+        prev_headers = [
+            h for h in headers
+            if int(h.get("containerVersionId", "0")) < int(version_id)
+        ]
+        if prev_headers:
+            prev_id = prev_headers[-1]["containerVersionId"]
+            print(f"  差分計算: v{prev_id} → v{version_id}...")
+            try:
+                before = gtm.get_version(container_id, prev_id)
+                diff_entries = compute_diff(before, version)
+                if explainer.enabled:
+                    for entry in diff_entries:
+                        summary = (
+                            f"[{entry.change_kind}] {entry.element_kind}: {entry.name}\n"
+                            f"前: {entry.before}\n後: {entry.after}"
+                        )
+                        entry.explanation = explainer.explain_diff(summary)
+                version_name = version.get("name", "")
+                version_desc = version.get("description", "")
+                rows, header_row = format_version_diff_tab(
+                    diff_entries, version_id, version_name, version_desc, prev_id
+                )
+                writer.write_tab(f"v{version_id}_{label}_差分", rows, table_header_row=header_row)
+            except Exception as e:
+                print(f"  警告: 差分タブの生成に失敗しました: {e}")
+        else:
+            print(f"  v{version_id} が最初のバージョンのため差分タブはスキップします")
+
         _write_version_list(writer, headers, label, live_vid)
-        _write_version_sheets(writer, explainer, gtm, container_id, label, version_id, headers)
 
 
 def main() -> None:
