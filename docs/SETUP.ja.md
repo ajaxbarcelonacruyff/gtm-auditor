@@ -47,6 +47,10 @@ gtm-auditor/
 
 > `credentials.json` は `.gitignore` に登録済みで、Git にはコミットされません。
 
+> **「Publish app」は不要です。**  
+> Publishing status が **Testing** のままで問題ありません。個人利用ツールには Google 審査は不要で、テストユーザーに自分のアカウントを追加するだけで認証できます。  
+> ただし Testing 状態では `token.json` が **7日で失効**します。期限切れ時は `token.json` を削除して再実行すると再ログインできます。
+
 ---
 
 ## Step 3 — 依存ライブラリをインストールする

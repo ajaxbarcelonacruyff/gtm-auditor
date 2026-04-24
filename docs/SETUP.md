@@ -47,6 +47,10 @@ gtm-auditor/
 
 > `credentials.json` is listed in `.gitignore` and will never be committed.
 
+> **You do NOT need to click "Publish app".**  
+> Leaving the Publishing status as **Testing** is fine for personal use — no Google verification required. Just make sure your Google account is added as a test user.  
+> Note: in Testing mode, `token.json` **expires after 7 days**. When it does, delete `token.json` and run again to re-authenticate.
+
 ---
 
 ## Step 3 — Install Dependencies
