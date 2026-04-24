@@ -64,8 +64,8 @@ class GTMClient:
         result = (
             self.service.accounts()
             .containers()
-            .versions()
-            .list(parent=path, includeDeleted=False)
+            .version_headers()
+            .list(parent=path)
             .execute()
         )
         headers = result.get("containerVersionHeader", [])
